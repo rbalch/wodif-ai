@@ -1,0 +1,1 @@
+"""Wodify Auto-Signup Application"""

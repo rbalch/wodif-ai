@@ -1,0 +1,81 @@
+name: wodify-signup
+
+services:
+  dev:
+    container_name: wodify-signup-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - ollama
+    volumes:
+      # Main workspace
+      - ./:/workspace:cached
+      - ./app:/app:cached
+
+      # Named volumes for persistent data
+      - root-history:/root/history
+      - vscode-server:/root/.vscode-server
+      - huggingface-cache:/huggingface
+      - ollama-models:/root/.ollama/models
+
+      # User config mounts
+      # - ~/.ssh:/home/dev/.ssh:ro
+      # - ~/.config/gcloud:/home/dev/.config/gcloud
+      # - ~/.gemini:/home/dev/.gemini
+      # - ~/.claude:/home/dev/.claude
+      # - ~/.claude.json:/home/dev/.claude.json
+      - /var/run/docker.sock:/var/run/docker.sock
+    stdin_open: true
+    tty: true
+    env_file:
+      - ./.env
+    environment:
+      HF_HOME: /huggingface
+      OLLAMA_HOST: http://ollama:11434
+      PYTHONPATH: /workspace
+      # GOOGLE_CLOUD_PROJECT: gemini-code-assist-466218
+      # Tell dev container where the app is
+      # APP_HOST: app
+      # APP_PORT: 3000
+    # command: sleep infinity
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: wodify-ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "11434:11434"
+    entrypoint: ["/bin/sh", "-c"]
+    restart: no
+    command:
+      - |
+        # Start ollama in the background
+        /bin/ollama serve &
+        # Wait for ollama to be ready
+        sleep 5
+        # Pull the model if not already present
+        ollama pull qwen3:8b
+        # Keep container running
+        wait
+    # Optional: GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+
+volumes:
+  # Persistent volumes
+  root-history:
+    external: true
+  vscode-server:
+    external: true
+  huggingface-cache:
+    external: true
+  ollama-models:
+    external: true

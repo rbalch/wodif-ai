@@ -1,0 +1,36 @@
+"""Logging configuration for the application"""
+
+import logging
+import sys
+
+
+def setup_logger(name: str = "wodify-signup", level: int = logging.INFO) -> logging.Logger:
+    """
+    Set up a logger with consistent formatting
+
+    Args:
+        name: Logger name
+        level: Logging level
+
+    Returns:
+        Configured logger instance
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # Remove existing handlers to avoid duplicates
+    logger.handlers = []
+
+    # Console handler with formatting
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(level)
+
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+
+    return logger
