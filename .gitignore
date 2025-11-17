@@ -36,11 +36,12 @@ playwright-report/
 test-results/
 playwright/.cache/
 
-# Screenshots and artifacts
+# Screenshots and artifacts (but allow assets/)
 *.png
 *.jpg
 *.jpeg
 *.gif
+!assets/**
 !.gitkeep
 screenshots/
 
