@@ -39,3 +39,9 @@ clean: ## Stop services and remove containers
 
 stop-dev: ## Stop dev service
 	docker compose -f docker-compose.yml stop dev
+
+show-errors: ## Show error when the job started but didn't complete
+	cat /var/log/wodify.log
+
+show-system-errors: ## Show errors (like on cron) when something more fundamental fails
+	journalctl -u wodify-signup.service -b
