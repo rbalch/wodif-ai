@@ -59,10 +59,44 @@ class BrowserService:
         Returns:
             True if login successful, False otherwise
         """
-        # Try primary login selector
+        # New flow (2024+): Email on homepage, then CONTINUE, then password
+        email_input = self.page.locator("input[type='email'], input#Input_UserName2")
+        if email_input.count() > 0 and email_input.first.is_visible():
+            self.logger.info("Using new login flow (email on homepage)")
+
+            # Step 1: Enter email
+            email_input.first.fill(Config.WODIFY_EMAIL)
+
+            # Step 2: Click CONTINUE
+            continue_btn = self.page.get_by_role("button", name=re.compile("Continue", re.I))
+            if continue_btn.count() == 0:
+                self.logger.warning("No CONTINUE button found")
+                return False
+            continue_btn.click()
+            self.page.wait_for_timeout(3000)
+
+            # Step 3: Enter password
+            pwd_field = self.page.locator("input[type='password']")
+            if pwd_field.count() == 0:
+                self.logger.warning("No password field found after CONTINUE")
+                return False
+            pwd_field.first.fill(Config.WODIFY_PASSWORD)
+
+            # Step 4: Click Sign in
+            signin_btn = self.page.get_by_role("button", name=re.compile("Sign in", re.I))
+            if signin_btn.count() == 0:
+                self.logger.warning("No Sign in button found")
+                return False
+            signin_btn.click()
+            self.page.wait_for_load_state("networkidle")
+
+            self.logger.info("Login successful (new flow)")
+            return True
+
+        # Old flow fallback: Click Login link first
         login_link = self.page.get_by_text("Login", exact=False)
         if login_link.count() > 0:
-            self.logger.info("Found login link (text selector)")
+            self.logger.info("Using old login flow (login link)")
             login_link.first.click()
             self.page.wait_for_timeout(2000)
 
@@ -71,25 +105,10 @@ class BrowserService:
             self.page.get_by_role("button", name=re.compile("Sign in", re.I)).click()
             self.page.wait_for_load_state("networkidle")
 
-            self.logger.info("Login successful")
+            self.logger.info("Login successful (old flow)")
             return True
 
-        # Try alternative login selector
-        alt_login = self.page.get_by_role("link", name=re.compile("Login", re.I))
-        if alt_login.count() > 0:
-            self.logger.info("Found login link (role selector)")
-            alt_login.first.click()
-            self.page.wait_for_timeout(2000)
-
-            self.page.get_by_role("textbox", name=re.compile("Email", re.I)).fill(Config.WODIFY_EMAIL)
-            self.page.get_by_role("textbox", name=re.compile("Password", re.I)).fill(Config.WODIFY_PASSWORD)
-            self.page.get_by_role("button", name=re.compile("Sign in", re.I)).click()
-            self.page.wait_for_load_state("networkidle")
-
-            self.logger.info("Login successful (alternative method)")
-            return True
-
-        self.logger.warning("No login link found")
+        self.logger.warning("No login method found")
         return False
 
     def login(self):
@@ -213,7 +232,7 @@ class BrowserService:
         try:
             self.page.get_by_role("button", name="Confirm Booking").click()
             self.logger.info("Clicked Confirm Booking")
-            self.page.wait_for_timeout(3000)
+            self.page.wait_for_timeout(10000)
             self.logger.info("✓ Booking completed successfully")
         except Exception as e:
             raise Exception(f"Failed to confirm booking: {e}")

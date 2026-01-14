@@ -10,8 +10,11 @@ help: ## Show this help message
 build: ## Build all Docker images
 	docker compose -f docker-compose.yml build
 
-shell: ## Open shell in dev container
+shell: ## Open shell in running dev container
 	docker compose -f docker-compose.yml exec dev /bin/bash
+
+sh: ## Start dev container with interactive shell
+	docker compose -f docker-compose.yml run --rm dev /bin/bash
 
 up: ## Start all services (detached mode)
 	docker compose -f docker-compose.yml up -d
@@ -21,6 +24,9 @@ down: ## Stop all services
 
 run: ## Run the Wodify booking script
 	docker compose -f docker-compose.yml run --rm dev python /app/main.py
+
+debug-login: ## Debug login issues with screenshots (run from inside container)
+	python /workspace/scripts/debug_login.py
 
 logs: ## View Ollama service logs
 	docker compose -f docker-compose.yml logs -f ollama
@@ -45,3 +51,11 @@ show-errors: ## Show error when the job started but didn't complete
 
 show-system-errors: ## Show errors (like on cron) when something more fundamental fails
 	journalctl -u wodify-signup.service -b
+
+test-service: ## trigger the nixos cron job
+	sudo systemctl start wodify-signup.service
+
+show-timers: ## display enabled timers
+	systemctl cat wodify-signup.timer
+	systemctl status wodify-signup.timer
+	systemctl list-timers --all | grep wodify

@@ -15,7 +15,7 @@ class Config:
     # Wodify credentials
     WODIFY_EMAIL = os.environ.get("EMAIL", "")
     WODIFY_PASSWORD = os.environ.get("PASSWORD", "")
-    WODIFY_URL = "https://delraybeach.wodify.com/OnlineSalesPage/Main?q=Memberships%7CLocationId%3D11090"
+    WODIFY_URL = "https://app.wodify.com"
 
     # Scheduling
     DAYS_AHEAD = int(os.environ.get("DAYS_AHEAD", "1"))  # Book for tomorrow by default
