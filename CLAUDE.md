@@ -92,6 +92,10 @@ OLLAMA_MODEL=qwen3:8b     # LLM model (default: qwen3:8b)
 OLLAMA_HOST=http://ollama:11434  # Set in docker-compose
 ```
 
+### Entry URL
+The app uses `https://app.wodify.com` as the entry point (hardcoded in `app/config.py`).
+**Important:** Do NOT use gym-specific URLs like `delraybeach.wodify.com` - they have different login flows.
+
 ### User Preferences (`app/prompts/system_prompt.txt`)
 - **Target time**: 7:00 AM - 8:00 AM
 - **Class type**: CrossFit (avoid OPEN GYM)
@@ -102,9 +106,11 @@ OLLAMA_HOST=http://ollama:11434  # Set in docker-compose
 
 ### Quick Commands
 ```bash
-make run           # Test run booking script
+make run           # Run booking script (from host)
+make sh            # Start dev container with interactive shell
+make shell         # Attach to running dev container
+make debug-login   # Debug login issues with screenshots (from inside container)
 make build         # Rebuild containers
-make shell         # Open dev container shell
 make logs          # View Ollama logs
 make start-ollama  # Start Ollama service
 make stop-ollama   # Stop Ollama (frees memory)
@@ -194,30 +200,56 @@ Each class is a `.list-item[data-list-item]` div:
 ## Development Scripts (`/scripts`)
 
 Test scripts used during development:
+- `debug_login.py` - **Login flow debugger** - takes screenshots at each step, dumps form fields, detects flow changes. Run with `make debug-login` from inside container.
 - `test2.py` - Playwright automation testing (interactive)
 - `test_llm_selection.py` - LLM selection with dummy data
 - `ollama_chat_test.py` - Interactive Ollama chat
 - `test_pushover.py` - Notification testing
 - `playwright-recording.py` - Original Playwright recording (reference)
 
+**Debugging Login Issues:**
+```bash
+make sh              # Get into container
+make debug-login     # Run debug script
+# Check screenshots in /workspace/screenshots/debug/
+```
+
 **Note:** Production app in `/app` supersedes these scripts.
 
 ## Key Implementation Details
 
-### Login Retry Logic
-Login link sometimes doesn't appear on first load:
+### Login Flow (Updated Jan 2026)
+Wodify uses a two-step login with reCAPTCHA v3 (invisible):
+
+**New Flow (current):**
+1. Email input on homepage (`input[type='email']`)
+2. Click CONTINUE button
+3. Password input on second page (`input[type='password']`)
+4. Click SIGN IN button
+
+**Old Flow (fallback):**
+- Login link → single page with email + password
+
 ```python
 def attempt_login() -> bool:
-    # Try text selector
-    # Try role selector
-    return success
+    # Try new flow first (email on homepage)
+    if email_input visible:
+        fill email → click CONTINUE → fill password → click SIGN IN
+        return True
 
-# Main flow
-if not attempt_login():
-    page.reload()
-    if not attempt_login():
-        raise Exception("Failed after 2 attempts")
+    # Fallback to old flow
+    if login_link exists:
+        click login → fill email + password → click SIGN IN
+        return True
+
+    return False
 ```
+
+**reCAPTCHA Notes:**
+- Uses v3 (invisible scoring, no checkbox)
+- Currently passes with normal Playwright automation
+- Once-daily cron job looks human enough
+- If it starts failing: add random delays, persist cookies, or use solving service
 
 ### Wait Strategies
 - **Calendar load**: `wait_for_timeout(5000)` works best
@@ -286,10 +318,13 @@ Logs to stdout (captured by Docker/cron).
 - Check with `HEADLESS=false` to see browser
 - Verify date selection worked
 
-### "Failed to login"
-- Check EMAIL/PASSWORD in .env
-- Wodify may have changed login flow
-- Check screenshots if saved
+### "Failed to login" / Password field timeout
+- **First**: Run `make sh` then `make debug-login` to see what's happening
+- Check screenshots in `screenshots/debug/` for the current login page state
+- Wodify may have changed their login flow again (they did in Jan 2026)
+- Look for new form fields, buttons, or flow changes in the debug output
+- Check EMAIL/PASSWORD in .env are correct
+- If reCAPTCHA is blocking: see reCAPTCHA notes in Login Flow section
 
 ### "LLM returned invalid JSON"
 - Ollama not ready (check `make logs`)
@@ -313,6 +348,7 @@ Logs to stdout (captured by Docker/cron).
 - Pushover tokens are sensitive
 - Consider app-specific password for Wodify
 - Docker socket mounted (required for docker-compose)
+- reCAPTCHA v3 runs on login page (currently passes, monitor for changes)
 
 ## Future Enhancements
 
