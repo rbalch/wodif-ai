@@ -13,6 +13,14 @@ PASSWORD = os.getenv("PASSWORD")
 SCREENSHOT_DIR = Path("/workspace/screenshots/debug")
 
 
+def clear_screenshot_dir():
+    """Delete existing debug screenshots and recreate the directory"""
+    import shutil
+    if SCREENSHOT_DIR.exists():
+        shutil.rmtree(SCREENSHOT_DIR)
+    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+
+
 def screenshot(page, name: str):
     """Take a screenshot with timestamp"""
     SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,6 +60,7 @@ def dump_form_fields(page):
 
 
 def main():
+    clear_screenshot_dir()
     print(f"\n{'='*60}")
     print("🔧 Wodify Login Debug Script")
     print(f"{'='*60}\n")
@@ -165,9 +174,16 @@ def main():
             signin_btn = page.get_by_role("button", name=re.compile("Sign in", re.I))
             if signin_btn.count() > 0:
                 signin_btn.click()
+                print("  ✓ Clicked sign in, waiting for page load...")
+                page.wait_for_timeout(3000)
+                print(f"  📍 URL after 3s: {page.url}")
+                screenshot(page, "06_after_signin_3s")
                 page.wait_for_timeout(5000)
-                screenshot(page, "06_after_signin")
-                print("  ✓ Clicked sign in")
+                print(f"  📍 URL after 8s: {page.url}")
+                screenshot(page, "06_after_signin_8s")
+                page.wait_for_timeout(5000)
+                print(f"  📍 URL after 13s: {page.url}")
+                screenshot(page, "06_after_signin_13s")
             else:
                 print("  ❌ No sign in button found")
                 dump_form_fields(page)

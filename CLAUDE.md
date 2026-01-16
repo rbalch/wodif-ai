@@ -58,7 +58,7 @@ Clean, modular architecture with services, utilities, and proper separation of c
 - `ollama`: LLM server, stays running for fast subsequent runs
 
 **Key Behavior:**
-- `docker-compose run --rm dev python /app/main.py` runs the booking script
+- `docker compose run --rm dev python /app/main.py` runs the booking script
 - `--rm` flag removes dev container after exit
 - Ollama service stays running (intentional - faster, model in memory)
 - Uses ~4-8GB RAM when running
@@ -89,7 +89,7 @@ PUSHOVER_APP_TOKEN=your_app_token
 DAYS_AHEAD=1              # Days to book ahead (default: 1)
 HEADLESS=true             # Browser mode (default: true)
 OLLAMA_MODEL=qwen3:8b     # LLM model (default: qwen3:8b)
-OLLAMA_HOST=http://ollama:11434  # Set in docker-compose
+OLLAMA_HOST=http://ollama:11434  # Set in docker compose
 ```
 
 ### Entry URL
@@ -119,7 +119,7 @@ make stop-ollama   # Stop Ollama (frees memory)
 ### Production Cron Job
 Runs 7pm Sunday-Thursday to book tomorrow's class:
 ```cron
-0 19 * * 0-4 cd /home/ryan/code/wodify-signup && docker-compose run --rm dev python /app/main.py >> /var/log/wodify.log 2>&1
+0 19 * * 0-4 cd /home/ryan/code/wodify-signup && docker compose run --rm dev python /app/main.py >> /var/log/wodify.log 2>&1
 ```
 
 ## LLM Setup
@@ -252,9 +252,11 @@ def attempt_login() -> bool:
 - If it starts failing: add random delays, persist cookies, or use solving service
 
 ### Wait Strategies
-- **Calendar load**: `wait_for_timeout(5000)` works best
-- **networkidle**: Unreliable alone (SPA keeps making requests)
-- **Date selection**: 3 second timeout after click
+Wodify is a SPA with post-login redirects. Current approach:
+
+- **After login**: `wait_for_load_state("networkidle")` - login redirects to Memberships page, then `navigate_to_calendar()` handles the rest
+- **After date selection**: `wait_for_timeout(3000)` after click
+- **Calendar load**: `wait_for_timeout(5000)` after clicking menu
 
 ### Date Calculation
 - Uses Python datetime with timedelta
@@ -347,7 +349,7 @@ Logs to stdout (captured by Docker/cron).
 - Screenshots may contain personal info (gitignored)
 - Pushover tokens are sensitive
 - Consider app-specific password for Wodify
-- Docker socket mounted (required for docker-compose)
+- Docker socket mounted (required for docker compose)
 - reCAPTCHA v3 runs on login page (currently passes, monitor for changes)
 
 ## Future Enhancements
@@ -373,7 +375,7 @@ Logs to stdout (captured by Docker/cron).
 │   └── prompts/             # System prompt
 ├── scripts/                  # Development/testing
 ├── screenshots/             # Debug screenshots (gitignored)
-├── docker-compose.yml       # Service definitions
+├── docker compose.yml       # Service definitions
 ├── Dockerfile               # Dev container (US Eastern TZ)
 ├── Makefile                 # Convenience commands
 ├── README.md               # User documentation
